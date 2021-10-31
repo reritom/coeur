@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Callable, Protocol, Tuple
+
+from dataclasses import is_dataclass
 from functools import wraps
-from dataclasses import is_dataclass, asdict
+from typing import Callable, Protocol
 
 
 class ServiceValidationError(Exception):
@@ -15,7 +16,11 @@ class PermissionProtocol(Protocol):
 
 class ServiceMetaClass(type):
     def __new__(cls, name, bases, namespace):
-        if "Meta" in namespace and hasattr(namespace["Meta"], "Context") and not is_dataclass(namespace["Meta"].Context):
+        if (
+            "Meta" in namespace
+            and hasattr(namespace["Meta"], "Context")
+            and not is_dataclass(namespace["Meta"].Context)
+        ):
             raise TypeError("Meta needs to be a dataclass")
 
         return super().__new__(cls, name, bases, namespace)
@@ -44,9 +49,12 @@ class ServiceAction:
         @wraps(self.__call__)
         def wrapper(*args, **kwargs):
             return self.__call__(obj, *args, **kwargs)
+
         return wrapper
 
-    def _get_permissions(self, _service: Service, *args, **kwargs) -> Tuple[PermissionProtocol, ...]:
+    def _get_permissions(
+        self, _service: Service, *args, **kwargs
+    ) -> tuple[PermissionProtocol, ...]:
         if self.__permission_method:
             return self.__permission_method(_service, *args, **kwargs)
         elif self.__use_service_permissions and hasattr(_service, "permissions"):

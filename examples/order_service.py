@@ -1,12 +1,14 @@
 from __future__ import annotations
-from coeur import Service, ServiceAction, ServiceValidationError
-from dataclasses import dataclass, field
-from typing import List
+
 import datetime
+from dataclasses import dataclass, field
+
+from coeur import Service, ServiceAction, ServiceValidationError
 
 
 def yesterday():
     return datetime.date.today() - datetime.timedelta(days=1)
+
 
 def tomorrow():
     return datetime.date.today() + datetime.timedelta(days=1)
@@ -24,19 +26,20 @@ class OrderItem:
     quantity: int
     unit: str
 
+
 @dataclass
 class Order:
     shipping_date: datetime.datetime
-    items: List[OrderItemDataclass] = field(default_factory=list)
-
+    items: list[OrderItem] = field(default_factory=list)
 
 
 class Permission:
     pass
 
+
 class Authenticated(Permission):
     """We'll assume that if the service is initialised with a user, that the user
-    has been authenticated"""
+    has been authenticated"""  # noqa
 
     def check_permission(self, service: Service, *args, **kwargs):
         if not bool(service.user):
@@ -44,7 +47,7 @@ class Authenticated(Permission):
 
 
 class CanCreateOrders(Permission):
-    """A user can only create an order if they have a feature flag on their user model"""
+    """A user can only create an order if they have a feature flag on their user model"""  # noqa
 
     def check_permission(self, service: Service, *args, **kwargs):
         if not (service.user and service.user.can_create_orders):
@@ -53,25 +56,23 @@ class CanCreateOrders(Permission):
 
 class Dao:
     """A dummy database access layer"""
+
     def create_order(order: Order) -> Order:
         # Pretend we persisted this
         return order
 
-    def get_orders() -> List[Order]:
+    def get_orders() -> list[Order]:
         # Pretend we got this from a database
         return [
             Order(
                 shipping_date=tomorrow(),
-                items=[OrderItem(product="mayo", quantity=5, unit="kg")]
+                items=[OrderItem(product="mayo", quantity=5, unit="kg")],
             )
         ]
 
 
-
-
-
 class OrderService(Service):
-    permissions = (Authenticated)
+    permissions = Authenticated
     create = ServiceAction("create")
     list = ServiceAction("list")
     emails = ServiceAction("email", use_service_permissions=False)
@@ -79,10 +80,10 @@ class OrderService(Service):
     class Meta:
         @dataclass
         class Context:
-            user: Optional[User] = None
+            user: User | None = None
 
     @create.permissions
-    def get_order_creation_permissions(self, order: Order) -> List[Permission]:
+    def get_order_creation_permissions(self, order: Order) -> list[Permission]:
         return (Authenticated, CanCreateOrders)
 
     @create.validate
@@ -102,7 +103,7 @@ class OrderService(Service):
         return Dao.create_order(order)
 
     @list.method
-    def get_orders(self) -> List[Order]:
+    def get_orders(self) -> list[Order]:
         return Dao.get_orders()
 
     @emails.method
@@ -110,8 +111,6 @@ class OrderService(Service):
         # Some method that is used without a specific authenticated user, maybe
         # called by a celery task. Note it can still have validators if needed
         ...
-
-
 
 
 def user_cant_create_order():
@@ -125,6 +124,7 @@ def user_cant_create_order():
     except PermissionError:
         # Error ""User cannot create orders""
         pass
+
 
 def validation_errors():
     # An example for a valid user, with invalid order parameters
@@ -140,7 +140,10 @@ def validation_errors():
         pass
 
     # Both the second validation will fail
-    order = Order(shipping_date=yesterday(), items=[OrderItem(product="mayo", quantity=1, unit="litre")])
+    order = Order(
+        shipping_date=yesterday(),
+        items=[OrderItem(product="mayo", quantity=1, unit="litre")],
+    )
     try:
         order = service.create_order(order)
     except ServiceValidationError:
@@ -148,7 +151,11 @@ def validation_errors():
         pass
 
     # Both validations are ok
-    order = Order(shipping_date=tomorrow(), items=[OrderItem(product="mayo", quantity=1, unit="litre")])
+    order = Order(
+        shipping_date=tomorrow(),
+        items=[OrderItem(product="mayo", quantity=1, unit="litre")],
+    )
+
 
 def getting_orders_with_service_level_permissions():
     # Unauthenticated (no user set on service)
@@ -163,7 +170,7 @@ def getting_orders_with_service_level_permissions():
     # instead of permissions set on the action
     user = User(name="Jack", can_create_orders=False)
     service = OrderService(user=user)
-    orders = service.get_orders()
+    orders = service.get_orders()  # noqa
 
 
 if __name__ == "__main__":
