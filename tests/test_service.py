@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import pytest
-from simple_services import Service, ServiceAction, ServiceValidationError
+from coeur import Service, ServiceAction, ServiceValidationError
 
 
 

@@ -28,19 +28,19 @@ def find_version(fname):
 
 setup(
     name="simple-service",
-    version=find_version("src/simple_services/__init__.py"),
-    description="Simple service framework",
+    version=find_version("src/coeur/__init__.py"),
+    description="Coeur service framework",
     author="Tomas Sheers",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
     author_email="t.sheers@outlook.com",
-    url="https://github.com/reritom/simple-services",
+    url="https://github.com/reritom/coeur",
     packages=find_packages("src"),
     package_dir={"": "src"},
     include_package_data=True,
     license="MIT",
     zip_safe=False,
-    keywords="simple-services",
+    keywords="coeur-services",
     python_requires=">=3.8",
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -54,6 +54,6 @@ setup(
     ],
     test_suite="tests",
     project_urls={
-        "Issues": "https://github.com/reritom/simple-services/issues",
+        "Issues": "https://github.com/reritom/coeur/issues",
     },
 )

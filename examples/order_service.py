@@ -1,5 +1,5 @@
 from __future__ import annotations
-from simple_services import Service, ServiceAction, ServiceValidationError
+from coeur import Service, ServiceAction, ServiceValidationError
 from dataclasses import dataclass, field
 from typing import List
 import datetime

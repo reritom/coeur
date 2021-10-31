@@ -1,5 +1,5 @@
-# simple-services
-Simple service framework for python applications.
+# Coeur
+A simple service framework for python applications.
 
 ## Introduction
 When creating python based applications, there is typically some core business logic. There are countless ways to organise this logic, including by using functions, or by building the business logic into other frameworks. For example, in a Flask application one may put the business logic directly into a `View`, or in Django Rest Framework, one might put the business logic into the `Serializer`.
@@ -18,7 +18,7 @@ Practically speaking, the Flask and DRF examples would be as follows:
 ### Permissions
 
 
-In usecases where there may not be a direct user, the permissions can either be explicitly set to an empty tuple, or the action can be marked as permission-less, but the service will still need to be instanciated based on the Meta.Args
+In usecases where there may not be a direct user, the permissions can either be explicitly set to an empty tuple, or the action can be marked as permission-less, but the service will still need to be instantiated based on the Meta.Args
 
 
 ### Validators
