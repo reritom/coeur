@@ -9,10 +9,6 @@ def read(fname):
     return content
 
 
-EXTRAS_REQUIRE = {}
-REQUIRES = read("requirements/requirements.txt").splitlines()
-
-
 def find_version(fname):
     """Attempts to find the version number in the file names fname.
     Raises RuntimeError if not found.
@@ -32,7 +28,7 @@ def find_version(fname):
 
 setup(
     name="simple-service",
-    version=find_version("src/py_services/__init__.py"),
+    version=find_version("src/simple_services/__init__.py"),
     description="Simple service framework",
     author="Tomas Sheers",
     long_description=read("README.md"),
@@ -42,8 +38,6 @@ setup(
     packages=find_packages("src"),
     package_dir={"": "src"},
     include_package_data=True,
-    install_requires=REQUIRES,
-    extras_require=EXTRAS_REQUIRE,
     license="MIT",
     zip_safe=False,
     keywords="simple-services",
