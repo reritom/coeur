@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import pytest
-from coeur import Service, ServiceAction, ServiceValidationError
+from typing import Optional, ClassVar
+from coeur import Service, ServiceAction, ServiceValidationError, PermissionProtocol
 
 
 @pytest.fixture
@@ -63,6 +64,44 @@ def service_class(is_superuser, is_authenticated):
 
         @action_using_service_permissions.method
         def action_using_service_permissions_method(self, data: dict):
+            return data
+
+    return DummyService
+
+
+
+@pytest.fixture
+def service_class_using_dataclass():
+    class IsAuthenticated:
+        def check_permission(self, service, *args, **kwargs):
+            if service.user_id is None:
+                raise PermissionError("User is not authenticated")
+
+    class IsSuperuser:
+        def check_permission(self, service, *args, **kwargs):
+            if not service.is_superuser:
+                raise PermissionError("User is not superuser")
+
+    @dataclass
+    class DummyService:
+        is_superuser: bool
+        user_id: Optional[int] = None
+
+        action: ClassVar[ServiceAction] = ServiceAction("action")
+        permissions: ClassVar[Tuple[PermissionProtocol]] = (IsAuthenticated,)
+
+        @action.validate
+        def validate_hello_in_data(self, data: dict):
+            if not "hello" in data:
+                raise ServiceValidationError("hello not in data")
+            return data
+
+        @action.permissions
+        def method_permissions(self, data: dict):
+            return (IsSuperuser,)
+
+        @action.method
+        def method(self, data: dict):
             return data
 
     return DummyService

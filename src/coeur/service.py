@@ -27,7 +27,9 @@ class Service(metaclass=ServiceMetaClass):
 
         if hasattr(self, "Meta") and hasattr(self.Meta, "Context"):
             self.context = self.Meta.Context(**kwargs)
-
+        else:
+            for key, value in kwargs.items():
+                setattr(self, key, value)
 
 
 class ServiceAction:

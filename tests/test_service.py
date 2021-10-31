@@ -66,6 +66,21 @@ def test_service_action_validate_input(service_class):
     # With the correct data, there should be no error
     service.action_with_multiple_validations({"hello": 1, "world": 2})
 
+
+def test_service_action_validate_input_using_dataclass_service(service_class_using_dataclass):
+    """The action action_with_multiple_validations has two validations that should be
+    performed in the order of definition"""
+    service = service_class_using_dataclass(is_superuser=True, user_id=1)
+
+    # The first defined validator should fail
+    with pytest.raises(ServiceValidationError) as ctx:
+        service.action({})
+
+    assert repr(ctx.value) == "ServiceValidationError('hello not in data')"
+
+    service.action({"hello":1})
+
+
 def test_service_action_dont_use_service_permissions(service_class):
     """The action permissionless_action has no explicit permissions, and is set to
     not use the service permissions, so even an unauthenticated user can use it"""
@@ -136,3 +151,11 @@ def test_service_with_no_parameters():
     service = DummyService()
     output = service.action()
     assert output == "something"
+
+def test_service_init_with_no_meta():
+    class DummyService(Service):
+        ...
+
+    service = DummyService(hello=1, world=2)
+    assert service.hello==1
+    assert service.world == 2
