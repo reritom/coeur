@@ -27,7 +27,7 @@ def find_version(fname):
 
 
 setup(
-    name="simple-service",
+    name="coeur",
     version=find_version("src/coeur/__init__.py"),
     description="Coeur service framework",
     author="Tomas Sheers",
