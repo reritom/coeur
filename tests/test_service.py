@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from coeur import Service, ServiceAction, ServiceValidationError
+from coeur import Service, ServiceValidationError, action
 
 
 def test_service_init_missing_required_context_arg_ko(service_class):
@@ -83,11 +83,11 @@ def test_service_action_validate_input_using_dataclass_service(
 
     # The first defined validator should fail
     with pytest.raises(ServiceValidationError) as ctx:
-        service.action({})
+        service.my_action({})
 
     assert repr(ctx.value) == "ServiceValidationError('hello not in data')"
 
-    service.action({"hello": 1})
+    service.my_action({"hello": 1})
 
 
 def test_service_action_dont_use_service_permissions(service_class):
@@ -98,76 +98,72 @@ def test_service_action_dont_use_service_permissions(service_class):
     service.permissionless_action({})
 
 
-def test_service_action_call_ko_no_method(service_class):
-    service = service_class(is_superuser=True)
-
-    with pytest.raises(ValueError) as ctx:
-        service.action_with_no_method()
-
-    assert (
-        repr(ctx.value)
-        == "ValueError(\"Method not set for action ServiceAction(name='action_with_no_method')\")"  # noqa
-    )
-
-
 def test_service_ko_method_already_set():
     with pytest.raises(ValueError) as ctx:
 
         class DummyService(Service):
-            action = ServiceAction("action")
-
-            @action.method
-            def first_method(self):
+            @action
+            def my_action(self):
                 ...
 
-            @action.method
+            @my_action.method
             def second_method(self):
                 ...
 
-    assert (
-        repr(ctx.value)
-        == "ValueError(\"Method already set for ServiceAction(name='action')\")"
-    )
+    assert repr(ctx.value) == "ValueError('Method already set for action')"
 
 
 def test_service_ko_permission_method_already_set():
     with pytest.raises(ValueError) as ctx:
 
         class DummyService(Service):
-            action = ServiceAction("action")
+            @action
+            def my_action(self):
+                ...
 
-            @action.permissions
+            @my_action.permissions
             def first_permissions(self):
                 ...
 
-            @action.permissions
+            @my_action.permissions
             def second_permissions(self):
-                ...
-
-            @action.method
-            def method(self):
                 ...
 
     assert (
         repr(ctx.value)
-        == "ValueError(\"Permission method already set for ServiceAction(name='action')\")"  # noqa
+        == "ValueError('Permission method already set for action')"  # noqa
     )
+
+
+def test_service_action_with_check_permissions():
+    class DummyService(Service):
+        @action
+        def my_action(self, data):
+            return "something"
+
+        @my_action.permission_check
+        def check_permission(self, data):
+            raise PermissionError("Check failed")
+
+    # The first defined validator should fail
+    with pytest.raises(PermissionError) as ctx:
+        DummyService().my_action({})
+
+    assert repr(ctx.value) == "PermissionError('Check failed')"
 
 
 def test_service_with_no_parameters():
     class DummyService(Service):
-        action = ServiceAction("action")
+        @action
+        def my_action(self):
+            return "something"
 
-        @action.validate
+        @my_action.validate
         def validate_action(self):
             return
 
-        @action.method
-        def method(self):
-            return "something"
-
     service = DummyService()
-    output = service.action()
+    output = service.my_action()
     assert output == "something"
 
 

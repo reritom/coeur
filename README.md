@@ -20,22 +20,19 @@ A Service is class that populates a context using the args at initialisation tim
 Using the Service:
 ```python
 class MyService(Service):
-  class Meta:
-    @dataclass
-    class Context:
-      account_id: int = None
-      user_id: Optional[int] = None
-
-  action = ActionService("action")
+    class Meta:
+        @dataclass
+        class Context:
+            account_id: int = None
+            user_id: Optional[int] = None
 ```
 
 Using a dataclass:
 ```python
 @dataclass
 class MyService:
-  account_id: int = None
-  user_id: Optional[int] = None
-  action: ClassVar[ActionService] = ActionService("action")
+    account_id: int = None
+    user_id: Optional[int] = None
 ```
 
 Though note the Service child will have the inputs accessible through `service.context`, while the dataclass instance will have the attributes directly accessible through the instance.
@@ -50,21 +47,19 @@ When the service is called, the permissions will be checked, then each validator
 
 ```python
 class MyService(Service):
-  action = ServiceAction("action")
+    @action
+    def create_something(self, data):
+        # The method that will be called from service.action()
+        ...
 
-  @action.permissions
-  def get_creation_permissions(self, data):
-    return (IsSuperuser,)
+    @action.permissions
+    def get_creation_permissions(self, data):
+        return (IsSuperuser,)
 
-  @action.validate
-  def validate_creation(self, data):
-    # Perform some validation
-    ...
-
-  @action.method
-  def create_something(self, data):
-    # The method that will be called from service.action()
-    ...
+    @action.validate
+    def validate_creation(self, data):
+        # Perform some validation
+        ...
 ```
 
 ### Permissions
@@ -74,9 +69,9 @@ Any permission class should have a `check_permission` method that is passed the 
 
 ```python
 class IsAuthenticated:
-  def check_permission(self, service, *args, **kwargs):
-    if not service.context.user:
-      raise PermissionError()
+    def check_permission(self, service, *args, **kwargs):
+        if not service.context.user:
+            raise PermissionError()
 ```
 
 If not permissions are explicitly set for the action, any service level permissions will be used that have been defined on `MyService.permissions: List[Permission]`.
@@ -89,13 +84,13 @@ A service action can have multiple validators, defined using:
 ```python
 @my_action.validate
 def my_validation_function(self, data):
-  # Perform the validation
-  ...
+    # Perform the validation
+    ...
 ```
 The validators are called in the order of definition, and the validation function shouldn't mutate the data (any returned value is be discarded). The framework can work in conjunction with more powerful validation specific libraries such as `Marshmallow`, for example:
 ```python
 class OrderService(Service):
-  @create.validate
-  def validate_order_creation(self, data: dict):
-    OrderMarshmallowSchema().load(data)
+    @create.validate
+    def validate_order_creation(self, data: dict):
+        OrderMarshmallowSchema().load(data)
 ```

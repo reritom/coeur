@@ -38,11 +38,14 @@ class Service(metaclass=ServiceMetaClass):
 
 
 class ServiceAction:
-    def __init__(self, name: str, use_service_permissions: bool = True):
-        self.name = name
+    def __init__(
+        self, method: Callable | None = None, use_service_permissions: bool = True
+    ):
         self.__use_service_permissions = use_service_permissions
-        self.__method = None
+        self.__method = method
         self.__permission_method = None
+        self.__validator_context_func = None
+        self.__permission_checks = []
         self.__validators = []
 
     def __get__(self, obj, objtype=None):
@@ -64,10 +67,13 @@ class ServiceAction:
 
     def __call__(self, _service: Service, *args, **kwargs):
         if not self.__method:
-            raise ValueError(f"Method not set for action {self!r}")
+            raise ValueError("Method not set for actiom")
 
         for permission in self._get_permissions(_service, *args, **kwargs):
             permission().check_permission(_service, *args, **kwargs)
+
+        for permission_check in self.__permission_checks:
+            permission_check(_service, *args, **kwargs)
 
         for validator in self.__validators:
             validator(_service, *args, **kwargs)
@@ -76,7 +82,7 @@ class ServiceAction:
 
     def method(self, func: Callable) -> Callable:
         if self.__method:
-            raise ValueError(f"Method already set for {self!r}")
+            raise ValueError("Method already set for action")
         self.__method = func
         return func
 
@@ -86,9 +92,22 @@ class ServiceAction:
 
     def permissions(self, func: Callable) -> Callable:
         if self.__permission_method:
-            raise ValueError(f"Permission method already set for {self!r}")
+            raise ValueError("Permission method already set for action")
         self.__permission_method = func
         return func
 
-    def __repr__(self):
-        return f"ServiceAction(name='{self.name}')"
+    def permission_check(self, func: Callable) -> Callable:
+        self.__permission_checks.append(func)
+        return func
+
+
+def action(func: Callable | None = None, **options):
+    service_action = ServiceAction(method=func, **options)
+    if not func:
+
+        def inner(func):
+            service_action.method(func)
+            return service_action
+
+        return inner
+    return service_action

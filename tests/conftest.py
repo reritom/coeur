@@ -5,7 +5,7 @@ from typing import ClassVar
 
 import pytest
 
-from coeur import PermissionProtocol, Service, ServiceAction, ServiceValidationError
+from coeur import PermissionProtocol, Service, ServiceValidationError, action
 
 
 @pytest.fixture
@@ -31,16 +31,6 @@ def is_superuser():
 @pytest.fixture
 def service_class(is_superuser, is_authenticated):
     class DummyService(Service):
-        action_with_multiple_validations = ServiceAction(
-            "action_with_multiple_validations"
-        )
-        permissionless_action = ServiceAction(
-            "permissionless_action", use_service_permissions=False
-        )
-        action_using_service_permissions = ServiceAction(
-            "action_using_service_permissions"
-        )
-        action_with_no_method = ServiceAction("action_with_no_method")
         permissions = (is_authenticated,)
 
         class Meta:
@@ -48,6 +38,18 @@ def service_class(is_superuser, is_authenticated):
             class Context:
                 is_superuser: bool
                 user_id: int | None = None
+
+        @action
+        def action_with_multiple_validations(self, data: dict):
+            return data
+
+        @action(use_service_permissions=False)
+        def permissionless_action(self, data: dict):
+            return data
+
+        @action
+        def action_using_service_permissions(self, data: dict):
+            return data
 
         @action_with_multiple_validations.validate
         def validate_hello_in_data(self, data: dict):
@@ -64,18 +66,6 @@ def service_class(is_superuser, is_authenticated):
         @action_with_multiple_validations.permissions
         def item_creation_permissions(self, data: dict):
             return (is_superuser,)
-
-        @action_with_multiple_validations.method
-        def action_with_multiple_validations_method(self, data: dict):
-            return data
-
-        @permissionless_action.method
-        def permissionless_action_method(self, data: dict):
-            return data
-
-        @action_using_service_permissions.method
-        def action_using_service_permissions_method(self, data: dict):
-            return data
 
     return DummyService
 
@@ -96,22 +86,20 @@ def service_class_using_dataclass():
     class DummyService:
         is_superuser: bool
         user_id: int | None = None
-
-        action: ClassVar[ServiceAction] = ServiceAction("action")
         permissions: ClassVar[tuple[PermissionProtocol]] = (IsAuthenticated,)
 
-        @action.validate
+        @action
+        def my_action(self, data: dict):
+            return data
+
+        @my_action.validate
         def validate_hello_in_data(self, data: dict):
             if "hello" not in data:
                 raise ServiceValidationError("hello not in data")
             return data
 
-        @action.permissions
+        @my_action.permissions
         def method_permissions(self, data: dict):
             return (IsSuperuser,)
-
-        @action.method
-        def method(self, data: dict):
-            return data
 
     return DummyService

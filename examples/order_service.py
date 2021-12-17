@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from dataclasses import dataclass, field
 
-from coeur import Service, ServiceAction, ServiceValidationError
+from coeur import Service, ServiceValidationError, action
 
 
 def yesterday():
@@ -72,41 +72,38 @@ class Dao:
 
 
 class OrderService(Service):
-    permissions = Authenticated
-    create = ServiceAction("create")
-    list = ServiceAction("list")
-    emails = ServiceAction("email", use_service_permissions=False)
+    permissions = (Authenticated,)
 
     class Meta:
         @dataclass
         class Context:
             user: User | None = None
 
-    @create.permissions
+    @action
+    def create_order(self, order: Order) -> Order:
+        return Dao.create_order(order)
+
+    @create_order.permissions
     def get_order_creation_permissions(self, order: Order) -> list[Permission]:
         return (Authenticated, CanCreateOrders)
 
-    @create.validate
+    @create_order.validate
     def validate_order_items(self, order: Order):
         if not order.items:
             raise ServiceValidationError("Order requires order items")
         return order
 
-    @create.validate
+    @create_order.validate
     def validate_order_shipping_date(self, order: Order):
         if not order.shipping_date >= datetime.date.today():
             raise ServiceValidationError("Order shipping date is in the past")
         return order
 
-    @create.method
-    def create_order(self, order: Order) -> Order:
-        return Dao.create_order(order)
-
-    @list.method
+    @action
     def get_orders(self) -> list[Order]:
         return Dao.get_orders()
 
-    @emails.method
+    @action(use_service_permissions=False)
     def send_daily_emails(self):
         # Some method that is used without a specific authenticated user, maybe
         # called by a celery task. Note it can still have validators if needed
