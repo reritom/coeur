@@ -52,11 +52,11 @@ class MyService(Service):
         # The method that will be called from service.action()
         ...
 
-    @action.permissions
+    @create_something.permissions
     def get_creation_permissions(self, data):
         return (IsSuperuser,)
 
-    @action.validate
+    @create_something.validate
     def validate_creation(self, data):
         # Perform some validation
         ...

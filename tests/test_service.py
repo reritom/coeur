@@ -42,6 +42,51 @@ def test_service_action_ko_explicit_permission_failure(service_class):
     assert repr(ctx.value) == "PermissionError('User is not superuser')"
 
 
+def test_service_action_ko_multiple_contexts_defined():
+    with pytest.raises(ValueError) as ctx:
+
+        class DummyService(Service):
+            @action
+            def my_action(self, data):
+                ...
+
+            @my_action.validator_context
+            def get_context(self, data):
+                return {}
+
+            @my_action.validator_context
+            def get_context_again(self, data):
+                return {}
+
+    assert (
+        repr(ctx.value)
+        == "ValueError('Validator context maker already set for action')"
+    )
+
+
+def test_service_action_with_context():
+    class DummyService(Service):
+        @action
+        def my_action(self, data):
+            ...
+
+        @my_action.validator_context
+        def get_context(self, data):
+            if data.get("test"):
+                return {"context_a": "value"}
+            return {"normal_context": "value"}
+
+        @my_action.validate
+        def validate_action(self, context, data):
+            if "context_a" in context:
+                raise ServiceValidationError()
+
+    with pytest.raises(ServiceValidationError):
+        DummyService().my_action({"test": True})
+
+    DummyService().my_action({})
+
+
 def test_service_action_ko_service_permission_failure(service_class):
     """The action action_using_service_permissions has not explicit permissions, so it will use
     the service level permissions to check that the user is authenticated (not none)"""  # noqa

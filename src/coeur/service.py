@@ -69,6 +69,12 @@ class ServiceAction:
         if not self.__method:
             raise ValueError("Method not set for actiom")
 
+        context = (
+            self.__validator_context_func(_service, *args, **kwargs)
+            if self.__validator_context_func
+            else None
+        )
+
         for permission in self._get_permissions(_service, *args, **kwargs):
             permission().check_permission(_service, *args, **kwargs)
 
@@ -76,7 +82,9 @@ class ServiceAction:
             permission_check(_service, *args, **kwargs)
 
         for validator in self.__validators:
-            validator(_service, *args, **kwargs)
+            validator(_service, context, *args, **kwargs) if context else validator(
+                _service, *args, **kwargs
+            )
 
         return self.__method(_service, *args, **kwargs)
 
@@ -98,6 +106,12 @@ class ServiceAction:
 
     def permission_check(self, func: Callable) -> Callable:
         self.__permission_checks.append(func)
+        return func
+
+    def validator_context(self, func: Callable) -> Callable:
+        if self.__validator_context_func:
+            raise ValueError("Validator context maker already set for action")
+        self.__validator_context_func = func
         return func
 
 
