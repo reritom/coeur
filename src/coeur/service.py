@@ -6,7 +6,10 @@ from typing import Callable, Protocol
 
 
 class ServiceValidationError(Exception):
-    pass
+    def __init__(self, message: str | None = None, details: dict | None = None):
+        self.message = message
+        self.details = details
+        super().__init__(message)
 
 
 class PermissionProtocol(Protocol):
