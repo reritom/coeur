@@ -33,7 +33,7 @@ setup(
     author="Tomas Sheers",
     long_description=read("README.md"),
     long_description_content_type="text/markdown",
-    author_email="t.sheers@outlook.com",
+    author_email="t.sheers@protonmail.com",
     url="https://github.com/reritom/coeur",
     packages=find_packages("src"),
     package_dir={"": "src"},
