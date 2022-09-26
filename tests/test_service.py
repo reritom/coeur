@@ -5,8 +5,6 @@ import pytest
 from coeur import ServiceValidationError, action
 
 
-
-
 def test_service_action_ko_multiple_contexts_defined():
     with pytest.raises(ValueError) as ctx:
 
@@ -55,6 +53,7 @@ def test_service_action_with_context():
 def test_service_action_without_options_input():
     """The action action_without_context has two validations that should be
     performed in the order of definition"""  # noqa
+
     class Service:
         @action
         def action_without_actions(self, data: dict):
@@ -94,6 +93,7 @@ def test_service_action_without_options_input():
 def test_service_action_with_options_input():
     """The action action_with_context has two validations that should be
     performed in the order of definition"""  # noqa
+
     def first_validation(service, data):
         if "one" not in data:
             raise ServiceValidationError("This is raised first")
@@ -109,7 +109,6 @@ def test_service_action_with_options_input():
             if "two" not in data:
                 raise ServiceValidationError("This is raised second")
             return data
-
 
     service = Service()
 

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import is_dataclass
 from functools import wraps
 import inspect
 from typing import Any, Callable, Optional
@@ -15,10 +14,13 @@ class ServiceValidationError(Exception):
 
 class ServiceAction:
     def __init__(
-        self, method: Callable | None = None, validators: Optional[list] = None, validator_context_factory: Optional[Callable] = None
+        self,
+        method: Callable | None = None,
+        validators: Optional[list] = None,
+        validator_context_factory: Optional[Callable] = None,
     ):
         """Initialise the service action with any of the given attributes. Any attribute not set during
-        initialisation can be set later via decorators """
+        initialisation can be set later via decorators"""
         self.method = method
         self.validator_context_factory = validator_context_factory
         self.validators = validators or []
@@ -27,10 +29,10 @@ class ServiceAction:
         """The service actions used in other classes as methods, overriding __get__ allows one
         to return a reference the registered service action method, while passing the other class
         using this descriptor as the first argument, simulating a bound method with self as the first
-        argument. 
-        
+        argument.
+
         Given:
-    
+
         class MyService:
             @action
             def my_action(self: MyService):
@@ -48,6 +50,7 @@ class ServiceAction:
 
         Then when the function is called, the registered method is called, and the caller is passed as the self parameter.
         """
+
         @wraps(self.__call__)
         def wrapper(*args, **kwargs):
             return self.__call__(obj, *args, **kwargs)
@@ -93,7 +96,7 @@ class ServiceAction:
     def validator_context(self, func: Callable) -> Callable:
         """Optionally register a validator context factory. This method will be pass all of the provided
         args and kwargs, and the output will be passed to each of the validators.
-        
+
         The validator context can be used to perform any expensive operations that multiple validations require."""
         if self.validator_context_factory:
             raise ValueError("Validator context factory already set for action")
@@ -101,16 +104,18 @@ class ServiceAction:
         return func
 
 
-def action(func: Callable | None = None, /, **options) -> ServiceAction | Callable[[Callable], ServiceAction]:
+def action(
+    func: Callable | None = None, /, **options
+) -> ServiceAction | Callable[[Callable], ServiceAction]:
     """A decorator for registering a method defined on a class.
-    
+
     With no options:
-    
+
     class MyClass:
         @action
         def my_action(self):
             ...
-            
+
     With options:
 
     class MyClass:
@@ -126,6 +131,7 @@ def action(func: Callable | None = None, /, **options) -> ServiceAction | Callab
     """
     service_action = ServiceAction(method=func, **options)
     if not func:
+
         def inner(func):
             service_action.register(func)
             return service_action

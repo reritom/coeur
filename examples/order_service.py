@@ -13,6 +13,7 @@ def yesterday():
 def tomorrow():
     return datetime.date.today() + datetime.timedelta(days=1)
 
+
 def next_week():
     return datetime.date.today() + datetime.timedelta(days=7)
 
@@ -32,6 +33,7 @@ class Order:
 
 class Dao:
     """A dummy database access layer"""
+
     def create_order(order: Order) -> Order:
         # Pretend we persisted this
         return order
@@ -67,8 +69,12 @@ class OrderService:
 
     @create_order.validate
     def validate_order_shipping_date_not_too_soon(self, order: Order):
-        if (order.shipping_date - datetime.date.today()) < self.minimum_shipping_duration:
-            raise ServiceValidationError("Order shipping date is too soon, not enough time to prepare")
+        if (
+            order.shipping_date - datetime.date.today()
+        ) < self.minimum_shipping_duration:
+            raise ServiceValidationError(
+                "Order shipping date is too soon, not enough time to prepare"
+            )
         return order
 
 
@@ -83,6 +89,7 @@ def test_no_items():
         # Error "Order requires order items"
         pass
 
+
 def test_no_items_and_invalid_shipping_date():
     service = OrderService(minimum_shipping_duration=datetime.timedelta(days=5))
 
@@ -96,6 +103,7 @@ def test_no_items_and_invalid_shipping_date():
     except ServiceValidationError:
         # Error "Order shipping date is in the past"
         pass
+
 
 def test_shipping_too_soon():
     service = OrderService(minimum_shipping_duration=datetime.timedelta(days=5))
@@ -112,6 +120,7 @@ def test_shipping_too_soon():
         # Error "Order shipping date is too soon, not enough time to prepare"
         pass
 
+
 def test_ok():
     service = OrderService(minimum_shipping_duration=datetime.timedelta(days=5))
 
@@ -122,7 +131,6 @@ def test_ok():
     )
 
     service.create_order(order)
-
 
 
 if __name__ == "__main__":
