@@ -431,3 +431,19 @@ def test_service_action_wrapped_method_only():
     service.my_action()
     assert log.call_args_list == [call("a"), call("b")]
     log.reset_mock()
+
+
+def test_service_action_skip_context_if_no_validators():
+    context = Mock()
+
+    class Service:
+        @action
+        def my_action(self):
+            pass
+
+        @my_action.validator_context
+        def make_context(self):
+            context()
+
+    Service().my_action()
+    context.assert_not_called()

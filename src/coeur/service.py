@@ -165,41 +165,43 @@ class ServiceAction:
         if not self.registered_method:
             raise ValueError("Method not set for action")
 
-        context = (
-            self.validator_context_factory(caller, *args, **kwargs)
-            if self.validator_context_factory
-            else None
-        )
+        if self.validators:
 
-        for validator in self.validators:
-            """This is more complex than it seems.
+            context = (
+                self.validator_context_factory(caller, *args, **kwargs)
+                if self.validator_context_factory
+                else None
+            )
 
-            Decorator registered validators are unbound at registration time, but bind after,
-            so the default behaviour of passing the service is fine.
+            for validator in self.validators:
+                """This is more complex than it seems.
 
-            Validators passed as options are unbound to the given service,
-            so the default behaviour of injecting the service is fine.
+                Decorator registered validators are unbound at registration time, but bind after,
+                so the default behaviour of passing the service is fine.
 
-            Bound validators (from either the service class, or external class instances)
-            can be registered afterwards.
+                Validators passed as options are unbound to the given service,
+                so the default behaviour of injecting the service is fine.
 
-            For external bound methods, it is ok to inject service.
+                Bound validators (from either the service class, or external class instances)
+                can be registered afterwards.
 
-            For methods bound to the actions service though,
-            it doesn't make sense for python to implicitly pass self
-            and then for this method to inject the service again.
+                For external bound methods, it is ok to inject service.
 
-            So any bound validator that is bound to the given caller skips the service injection
-            and relies on the implicitly self injection.
-            """
-            self_bound = getattr(validator, "__self__", None) == caller
-            validator_args = list(args)
-            if context:
-                validator_args.insert(0, context)
-            if not self_bound:
-                validator_args.insert(0, caller)
+                For methods bound to the actions service though,
+                it doesn't make sense for python to implicitly pass self
+                and then for this method to inject the service again.
 
-            validator(*validator_args, **kwargs)
+                So any bound validator that is bound to the given caller skips the service injection
+                and relies on the implicitly self injection.
+                """
+                self_bound = getattr(validator, "__self__", None) == caller
+                validator_args = list(args)
+                if context:
+                    validator_args.insert(0, context)
+                if not self_bound:
+                    validator_args.insert(0, caller)
+
+                validator(*validator_args, **kwargs)
 
         return self.registered_method(caller, *args, **kwargs)
 
