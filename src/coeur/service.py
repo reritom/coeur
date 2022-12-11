@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from functools import partial, wraps
 from typing import Any, Callable
 
 
@@ -11,106 +12,115 @@ class ServiceValidationError(Exception):
         super().__init__(message)
 
 
-class _WrappedMethod:
-    """A wrapper for the service action registered method. It provides tools
-    for overriding the registered validators, useful for testing purposes."""
+def make_wrapped_method(action, caller):
+    """A class factory is used to create the wrapped method. It allows the __call__ method to be
+    wrapped with the correct signature for each instance."""
 
-    def __init__(self, action: ServiceAction, caller: Any):
-        self.action = action
-        self.caller = caller
+    class _WrappedMethod:
+        """A wrapper for the service action registered method. It provides tools
+        for overriding the registered validators, useful for testing purposes."""
 
-    def __call__(self, *args, **kwargs):
-        """Call the ServiceAction.__call__, which subsequently calls the actual method"""
-        return self.action.run(self.caller, *args, **kwargs)
+        def __init__(self):
+            """Set the args despite using a factory to allow the action to
+            be accessed through the method.
 
-    @property
-    def validators(self) -> list[Callable]:
-        """A proxy getter for the action validators"""
-        return self.action.validators
+            Example:
+                my_action = my_service.my_method.action
+            """
+            self.action = action
 
-    @validators.setter
-    def validators(self, validators: list[Callable]):
-        """A proxy setter for the action validators"""
-        self.action.validators = validators
+        __call__ = wraps(action.registered_method)(partial(action.__call__, caller))
 
-    @contextmanager
-    def only(self, validators: list[str]):
-        """A context manager for running only the validators with the given names.
+        @property
+        def validators(self) -> list[Callable]:
+            """A proxy getter for the action validators"""
+            return action.validators
 
-        Note:
-            Validator functions with the same names aren't distinguished
+        @validators.setter
+        def validators(self, validators: list[Callable]):
+            """A proxy setter for the action validators"""
+            action.validators = validators
 
-        Example:
-            class Service:
-                @action(validators=[a, b])
-                def my_action(self, my_arg):
-                    ...
+        @contextmanager
+        def only(self, validators: list[str]):
+            """A context manager for running only the validators with the given names.
 
-            service = Service()
-            with Service().my_action.only([a.__name__]):
-                service.my_action(my_arg=my_arg)
-        """
-        existing = self.validators
-        self.validators = [
-            existing for existing in existing if existing.__name__ in validators
-        ]
-        try:
-            yield
-            self.validators = existing
-        except Exception:
-            self.validators = existing
-            raise
+            Note:
+                Validator functions with the same names aren't distinguished
 
-    @contextmanager
-    def using(self, validators: list[Callable]):
-        """A context manager for calling the action with overridden validators applied to it
+            Example:
+                class Service:
+                    @action(validators=[a, b])
+                    def my_action(self, my_arg):
+                        ...
 
-        Example:
-            class Service:
-                @action(validators=[a, b])
-                def my_action(self, my_arg):
-                    ...
+                service = Service()
+                with Service().my_action.only([a.__name__]):
+                    service.my_action(my_arg=my_arg)
+            """
+            existing = self.validators
+            self.validators = [
+                existing for existing in existing if existing.__name__ in validators
+            ]
+            try:
+                yield
+                self.validators = existing
+            except Exception:
+                self.validators = existing
+                raise
 
-            service = Service()
-            with Service().my_action.using([a]):
-                service.my_action(my_arg=my_arg)
-        """
-        existing = self.validators
-        self.validators = validators
-        try:
-            yield
-            self.validators = existing
-        except Exception:
-            self.validators = existing
-            raise
+        @contextmanager
+        def using(self, validators: list[Callable]):
+            """A context manager for calling the action with overridden validators applied to it
 
-    @contextmanager
-    def excluding(self, validators: list[str]):
-        """A context manager for excluding the given validator names.
+            Example:
+                class Service:
+                    @action(validators=[a, b])
+                    def my_action(self, my_arg):
+                        ...
 
-        Note:
-            Validator functions with the same names aren't distinguished
+                service = Service()
+                with Service().my_action.using([a]):
+                    service.my_action(my_arg=my_arg)
+            """
+            existing = self.validators
+            self.validators = validators
+            try:
+                yield
+                self.validators = existing
+            except Exception:
+                self.validators = existing
+                raise
 
-        Example:
-            class Service:
-                @action(validators=[a, b])
-                def my_action(self, my_arg):
-                    ...
+        @contextmanager
+        def excluding(self, validators: list[str]):
+            """A context manager for excluding the given validator names.
 
-            service = Service()
-            with Service().my_action.exclude([a.__name__]):
-                service.my_action(my_arg=my_arg)
-        """
-        existing = self.validators
-        self.validators = [
-            existing for existing in existing if existing.__name__ not in validators
-        ]
-        try:
-            yield
-            self.validators = existing
-        except Exception:
-            self.validators = existing
-            raise
+            Note:
+                Validator functions with the same names aren't distinguished
+
+            Example:
+                class Service:
+                    @action(validators=[a, b])
+                    def my_action(self, my_arg):
+                        ...
+
+                service = Service()
+                with Service().my_action.exclude([a.__name__]):
+                    service.my_action(my_arg=my_arg)
+            """
+            existing = self.validators
+            self.validators = [
+                existing for existing in existing if existing.__name__ not in validators
+            ]
+            try:
+                yield
+                self.validators = existing
+            except Exception:
+                self.validators = existing
+                raise
+
+    return _WrappedMethod()
 
 
 class ServiceAction:
@@ -152,7 +162,7 @@ class ServiceAction:
         Then when the wrapped method is called, the registered method is called,
         and the caller is passed as the self parameter.
         """
-        return _WrappedMethod(action=self, caller=obj)
+        return make_wrapped_method(action=self, caller=obj)
 
     def run(self, caller: Any, *args, **kwargs):
         """Call the registered method (if there is one),
@@ -242,9 +252,17 @@ class ServiceAction:
         return func
 
 
-def action(
-    func: Callable | None = None, /, **options
-) -> ServiceAction | Callable[[], ServiceAction()]:
+def make_service_action(registered_method: Callable, **options):
+    """A class factory is used to create the wrapped method. It allows the __call__ method to be
+    wrapped with the correct signature for each instance."""
+
+    class _ServiceAction(ServiceAction):
+        __call__ = wraps(registered_method)(ServiceAction.__call__)
+
+    return _ServiceAction(registered_method=registered_method, **options)
+
+
+def action(func: Callable | None = None, /, **options):
     """A decorator for registering a method defined on a class.
 
     Examples:
@@ -268,13 +286,11 @@ def action(
                 def my_action(self):
                     ...
     """
-    service_action = ServiceAction(registered_method=func, **options)
-
     if not func:
 
         def inner(func) -> ServiceAction:
-            service_action.register(func)
-            return service_action
+            return make_service_action(registered_method=func, **options)
 
         return inner
-    return service_action
+
+    return make_service_action(registered_method=func, **options)

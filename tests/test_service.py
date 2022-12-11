@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from inspect import Parameter, Signature, signature
 from unittest.mock import Mock, call, sentinel
 
 import pytest
@@ -447,3 +448,27 @@ def test_service_action_skip_context_if_no_validators():
 
     Service().my_action()
     context.assert_not_called()
+
+
+def test_service_action_class_signature():
+    class Service:
+        @action
+        def my_action(self, /, a: int, b: str):
+            return
+
+    assert signature(Service().my_action) == Signature(
+        parameters=[
+            Parameter("a", Parameter.POSITIONAL_OR_KEYWORD, annotation="int"),
+            Parameter("b", Parameter.POSITIONAL_OR_KEYWORD, annotation="str"),
+        ]
+    )
+
+
+@pytest.mark.skip("This doesnt work yet")
+def test_service_action_signature():
+    def my_action(a: int, b: int):
+        pass
+
+    service_action = action(my_action)
+
+    assert signature(service_action.__call__) == signature(my_action)
